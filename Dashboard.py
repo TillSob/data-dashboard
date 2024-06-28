@@ -6,6 +6,7 @@ import pandas as pd
 import plotly.express as px
 import os
 from dotenv import load_dotenv
+from datetime import datetime, timezone, timedelta
 
 load_dotenv()
 
@@ -22,25 +23,37 @@ app.layout = html.Div([
     dcc.Graph(id='live-update-temp')
 ])
 
+def unix_to_hours(unix_timestamp):
+    dt = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
+    return dt
+
 @app.callback(
     [Output('live-update-graph', 'figure'),
      Output('live-update-temp', 'figure')],
     [Input('interval-component', 'n_intervals')]
 )
+
+
 def update_graph_live(n):
     api_key = os.getenv('API_KEY')
-    location = '37.7749,-122.4194'
-    url = f'https://api.pirateweather.net/forecast/{api_key}/{location}'
+    location = '52.52,13.4049'
+    units = 'units=ca'
+    url = f'https://api.pirateweather.net/forecast/{api_key}/{location}?&{units}'
     response = requests.get(url)
     data = response.json()
 
+    for hour_data in data['hourly']['data']:
+        unix_time = hour_data['time']
+        hour_data['datetime'] = unix_to_hours(unix_time)
+
+        
     hourly_data = data['hourly']['data']
     df = pd.DataFrame(hourly_data)
     
-    fig_precip = px.line(df, x='time', y='precipIntensity', title='Niederschlagsintensität')
-    fig_temp = px.line(df, x='time', y='temperature', title='Temperatur')
+    fig_precip = px.line(df, x='datetime', y='precipIntensity', title='Niederschlagsintensität')
+    fig_temp = px.line(df, x='datetime', y='temperature', title='Temperatur')
 
-    return fig_precip, fig_temp
+    return [fig_precip, fig_temp]
 
 if __name__ == '__main__':
     app.run_server(debug=True)

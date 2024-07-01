@@ -6,23 +6,23 @@ import pandas as pd
 import plotly.express as px
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 
 load_dotenv()
 
 app = dash.Dash(__name__)
 
 colors = {
-    'background' : '#111111',
+    'background': '#111111',
     'text': '#7FDBFF'
 }
 
 fonts = {
-    'font' : 'sans-serif'
+    'font': 'sans-serif'
 }
 
-
 app.layout = html.Div(style={'backgroundColor': colors['background'], 'fontFamily': fonts['font']}, children=[
+    dcc.Geolocation(id='geolocation'),
     html.H1(
         children='Echtzeit Wetterdaten Dashboard',
         style={
@@ -34,7 +34,6 @@ app.layout = html.Div(style={'backgroundColor': colors['background'], 'fontFamil
         interval=10*60*1000,  # in milliseconds
         n_intervals=0
     ),
-    #dcc.Graph(id='live-update-graph'),
     dcc.Graph(id='live-update-temp')
 ])
 
@@ -43,15 +42,21 @@ def unix_to_hours(unix_timestamp):
     return dt
 
 @app.callback(
-    [ #Output('live-update-graph', 'figure'),
-     Output('live-update-temp', 'figure')],
-    [Input('interval-component', 'n_intervals')]
+    Output('live-update-temp', 'figure'),
+    Output('geolocation', 'update_now'),
+    Input('interval-component', 'n_intervals'),
+    Input('geolocation', 'position')
 )
+def update_graph_live(n, position):
+    print(f"Geolocation position: {position}")  # Debug print statement
 
-
-def update_graph_live(n):
+    if position is None or 'lat' not in position or 'lon' not in position:
+        return dash.no_update, dash.no_update
+    
     api_key = os.getenv('API_KEY')
-    location = '52.52,13.4049'
+    latitude = position['lat']
+    longitude = position['lon']
+    location = f'{latitude},{longitude}'
     units = 'units=ca'
     url = f'https://api.pirateweather.net/forecast/{api_key}/{location}?&{units}'
     response = requests.get(url)
@@ -61,11 +66,9 @@ def update_graph_live(n):
         unix_time = hour_data['time']
         hour_data['datetime'] = unix_to_hours(unix_time)
 
-        
     hourly_data = data['hourly']['data']
     df = pd.DataFrame(hourly_data)
-    
-#    fig_precip = px.line(df, x='datetime', y='precipIntensity', title='Niederschlagsintensität')
+
     fig_temp = px.line(df, x='datetime', y='temperature', title='Temperatur')
 
     fig_temp.update_layout(
@@ -74,13 +77,7 @@ def update_graph_live(n):
         font_color=colors['text']
     )
 
-    # fig_precip.update_layout(
-    #     plot_bgcolor=colors['background'],
-    #     paper_bgcolor=colors['background'],
-    #     font_color=colors['text']
-    # )
-
-    return [fig_temp] #fig_precip
+    return fig_temp, dash.no_update
 
 if __name__ == '__main__':
     app.run_server(debug=True)

@@ -12,14 +12,29 @@ load_dotenv()
 
 app = dash.Dash(__name__)
 
-app.layout = html.Div([
-    html.H1('Echtzeit Wetterdaten Dashboard'),
+colors = {
+    'background' : '#111111',
+    'text': '#7FDBFF'
+}
+
+fonts = {
+    'font' : 'sans-serif'
+}
+
+
+app.layout = html.Div(style={'backgroundColor': colors['background'], 'fontFamily': fonts['font']}, children=[
+    html.H1(
+        children='Echtzeit Wetterdaten Dashboard',
+        style={
+            'color': colors['text']
+        }
+    ),
     dcc.Interval(
         id='interval-component',
         interval=10*60*1000,  # in milliseconds
         n_intervals=0
     ),
-    dcc.Graph(id='live-update-graph'),
+    #dcc.Graph(id='live-update-graph'),
     dcc.Graph(id='live-update-temp')
 ])
 
@@ -28,7 +43,7 @@ def unix_to_hours(unix_timestamp):
     return dt
 
 @app.callback(
-    [Output('live-update-graph', 'figure'),
+    [ #Output('live-update-graph', 'figure'),
      Output('live-update-temp', 'figure')],
     [Input('interval-component', 'n_intervals')]
 )
@@ -50,10 +65,22 @@ def update_graph_live(n):
     hourly_data = data['hourly']['data']
     df = pd.DataFrame(hourly_data)
     
-    fig_precip = px.line(df, x='datetime', y='precipIntensity', title='Niederschlagsintensität')
+#    fig_precip = px.line(df, x='datetime', y='precipIntensity', title='Niederschlagsintensität')
     fig_temp = px.line(df, x='datetime', y='temperature', title='Temperatur')
 
-    return [fig_precip, fig_temp]
+    fig_temp.update_layout(
+        plot_bgcolor=colors['background'],
+        paper_bgcolor=colors['background'],
+        font_color=colors['text']
+    )
+
+    # fig_precip.update_layout(
+    #     plot_bgcolor=colors['background'],
+    #     paper_bgcolor=colors['background'],
+    #     font_color=colors['text']
+    # )
+
+    return [fig_temp] #fig_precip
 
 if __name__ == '__main__':
     app.run_server(debug=True)

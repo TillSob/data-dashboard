@@ -47,6 +47,10 @@ app.layout = html.Div(
             style={'background-color': colors['graphbg'], 'borderRadius': corners['borderRadius'], 'padding': corners['padding']},
             id='live-update-temp'
         ),
+        dcc.Graph(
+            style={'background-color': colors['graphbg'], 'borderRadius': corners['borderRadius'], 'padding': corners['padding']},
+            id='live-update-rain_intensity'
+        ),
         # Geolocation component to get the user's location
         dcc.Geolocation(id='geolocation'),
         # Interval component to update the data every 10 minutes
@@ -66,20 +70,18 @@ def unix_to_hours(unix_timestamp):
 
 # Callback to update the graph with live data
 @app.callback(
-    Output('live-update-temp', 'figure'),  # Output component to update the figure
+    Output('live-update-temp', 'figure'),  # Output component to update temp figure
+    Output('live-update-rain_intensity', 'figure'), # Output component to update rain_intensity figure
     Output('geolocation', 'update_now'),  # Output component to update the geolocation
     Input('interval-component', 'n_intervals'),  # Input component to trigger the update
     Input('geolocation', 'position')  # Input component to get the position
 )
 def update_graph_live(n, position):
-    # Debug print statement to check the position
-    print(f"Geolocation position: {position}")
-
     # Check if the position is valid
     if position is None or 'lat' not in position or 'lon' not in position:
-        return dash.no_update, dash.no_update
+        return dash.no_update, dash.no_update, dash.no_update
 
-    # Get the API key from environment variables
+    # Get the API key from environment variables, set position and units
     api_key = os.getenv('API_KEY')
     latitude = position['lat']
     longitude = position['lon']
@@ -102,15 +104,23 @@ def update_graph_live(n, position):
 
     # Create a scatter plot for temperature
     fig_temp = px.scatter(df, x='datetime', y='temperature', title='Temperatur', color='temperature')
+    # Create a bar plot for rain intensity in mm per hour
+    fig_rain_intensity = px.bar(df, x='datetime', y='precipIntensity', title='Rain in mm/h', color='precipIntensity')
 
-    # Update the layout of the plot
+    # Update the layout of the temperature plot
     fig_temp.update_layout(
         plot_bgcolor=colors['graphbg'],
         paper_bgcolor=colors['graphbg'],
         font_color=colors['text']
     )
+    # Update the layout of the rain intesity plot
+    fig_rain_intensity.update_layout(
+        plot_bgcolor=colors['graphbg'],
+        paper_bgcolor=colors['graphbg'],
+        font_color=colors['text']
+    )
 
-    return fig_temp, dash.no_update
+    return fig_temp, fig_rain_intensity, dash.no_update
 
 # Run the server
 if __name__ == '__main__':

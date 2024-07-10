@@ -6,7 +6,7 @@ import requests
 import pandas as pd
 import plotly.express as px
 import os
-from dotenv import load_dotenv  # Library to load environment variables from a .env file
+from dotenv import load_dotenv  # Library to load environment variables (API key) from .env file
 from datetime import datetime, timezone  # Libraries for datetime manipulation
 
 # Load environment variables from a .env file
@@ -17,9 +17,16 @@ app = dash.Dash(__name__)
 
 # Define color scheme for the app
 colors = {
-    'background': '#111111',
+    'background': 'rgb(0,0,0)',
+    'graphbg': 'rgb(0,10,40)',
     'text': '#7FDBFF'
 }
+
+# Define border settings for elements
+corners = {
+    'borderRadius': '25px',
+    'padding': '5px'
+    }
 
 # Define font settings for the app
 fonts = {
@@ -28,25 +35,29 @@ fonts = {
 
 # Define the layout of the app
 app.layout = html.Div(
-    style={'backgroundColor': colors['background'], 'fontFamily': fonts['font']},
+    style={'background-color': colors['background'], 'fontFamily': fonts['font'], 'borderRadius': corners['borderRadius'], 'padding': corners['padding']},
     children=[
-        # Geolocation component to get the user's location
-        dcc.Geolocation(id='geolocation'),
         # Header for the dashboard
         html.H1(
-            children='Echtzeit Wetterdaten Dashboard',
-            style={'color': colors['text']}
+            children='Realtime Weather Data Dashboard',
+            style={'background-color': colors['graphbg'], 'textAlign': 'center', 'color': colors['text'], 'borderRadius': corners['borderRadius'], 'padding': corners['padding']}
         ),
+        # Graph component to display the temperature data
+        dcc.Graph(
+            style={'background-color': colors['graphbg'], 'borderRadius': corners['borderRadius'], 'padding': corners['padding']},
+            id='live-update-temp'
+        ),
+        # Geolocation component to get the user's location
+        dcc.Geolocation(id='geolocation'),
         # Interval component to update the data every 10 minutes
         dcc.Interval(
             id='interval-component',
             interval=10*60*1000,  # in milliseconds
             n_intervals=0
-        ),
-        # Graph component to display the temperature data
-        dcc.Graph(id='live-update-temp')
+        )
     ]
 )
+
 
 # Function to convert Unix timestamp to datetime
 def unix_to_hours(unix_timestamp):
@@ -89,13 +100,13 @@ def update_graph_live(n, position):
     hourly_data = data['hourly']['data']
     df = pd.DataFrame(hourly_data)
 
-    # Create a line plot for temperature
-    fig_temp = px.line(df, x='datetime', y='temperature', title='Temperatur')
+    # Create a scatter plot for temperature
+    fig_temp = px.scatter(df, x='datetime', y='temperature', title='Temperatur', color='temperature')
 
     # Update the layout of the plot
     fig_temp.update_layout(
-        plot_bgcolor=colors['background'],
-        paper_bgcolor=colors['background'],
+        plot_bgcolor=colors['graphbg'],
+        paper_bgcolor=colors['graphbg'],
         font_color=colors['text']
     )
 
